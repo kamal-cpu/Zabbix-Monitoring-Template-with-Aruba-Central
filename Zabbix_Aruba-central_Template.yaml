@@ -1,0 +1,653 @@
+zabbix_export:
+  version: '6.0'
+  date: '2024-02-26T21:36:16Z'
+  groups:
+    - uuid: 9842db95f88643ecb8a9f13fec22a821
+      name: Aruba_Central
+    - uuid: cf8513797d7648adb81e2b66f519fb6f
+      name: Templates/Applications
+    - uuid: 7018d0e63c324f68a0aa8f298ee14101
+      name: 'Templates/Network devices'
+  templates:
+    - uuid: f448b00884a1451da449012a3831fc42
+      template: 'LVER AP Device'
+      name: 'LVER AP Device'
+      groups:
+        - name: Aruba_Central
+        - name: Templates/Applications
+        - name: 'Templates/Network devices'
+      items:
+        - uuid: bb80a683d7c74479ad02a07f1d332531
+          name: 'Central APs Details'
+          type: HTTP_AGENT
+          key: aps.details
+          delay: 24h
+          history: '0'
+          trends: '0'
+          value_type: TEXT
+          url: 'https://apigw-ca.central.arubanetworks.com/monitoring/v1/aps/{$SERIAL}'
+          headers:
+            - name: Authorization
+              value: 'Bearer {$LVER_TOKEN}'
+        - uuid: 66c946b4f7954d0682ebf8fd3793fd84
+          name: firmware_version
+          type: DEPENDENT
+          key: firmware_version
+          delay: '0'
+          trends: '0'
+          value_type: TEXT
+          inventory_link: OS
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.firmware_version
+          master_item:
+            key: aps.details
+        - uuid: 7c95da6918c54c14886032a88bbf6e36
+          name: Cpu_utilization_AP
+          type: CALCULATED
+          key: get.cpu_utilization.fmaster
+          delay: 5m
+          trends: '0'
+          value_type: TEXT
+          params: last(/LVER-ARUBA/master.ap)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.aps[?(@.serial == "{$SERIAL}")].cpu_utilization.first()'
+        - uuid: c2fb628e575347ea9267355441212864
+          name: Mem_free_AP
+          type: CALCULATED
+          key: get.mem_free.fmaster
+          delay: 5m
+          value_type: FLOAT
+          units: byte
+          params: last(/LVER-ARUBA/master.ap)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.aps[?(@.serial == "{$SERIAL}")].mem_free.first()'
+        - uuid: 0deacbdf35de45cbb5d9676d5fcf7519
+          name: Status_AP
+          type: CALCULATED
+          key: get.status.fmaster
+          delay: 5m
+          trends: '0'
+          value_type: TEXT
+          params: last(/LVER-ARUBA/master.ap)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.aps[?(@.serial == "{$SERIAL}")].status.first()'
+          triggers:
+            - uuid: 7ddae7a0d6b243339c8af4f05a4d2343
+              expression: 'last(/LVER AP Device/get.status.fmaster)<>"Up"'
+              name: 'AP Down'
+              priority: AVERAGE
+            - uuid: cea5f910c3a946489424c0a51a1998d8
+              expression: 'nodata(/LVER AP Device/get.status.fmaster,10m)=1'
+              name: 'No info'
+              priority: INFO
+        - uuid: 5e3c3dcad3ed423d872969a51318780a
+          name: Uptime_AP
+          type: CALCULATED
+          key: get.Uptime.fmaster
+          delay: 5m
+          value_type: FLOAT
+          units: s
+          params: last(/LVER-ARUBA/master.ap)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.aps[?(@.serial == "{$SERIAL}")].uptime.first()'
+        - uuid: 7ba8279055f545cd97870a3758cf638b
+          name: model
+          type: DEPENDENT
+          key: model
+          delay: '0'
+          trends: '0'
+          value_type: TEXT
+          inventory_link: MODEL
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.model
+          master_item:
+            key: aps.details
+        - uuid: 087dd4ae65c940f2ae2548669c8df912
+          name: serial
+          type: DEPENDENT
+          key: serial
+          delay: '0'
+          trends: '0'
+          value_type: TEXT
+          inventory_link: SERIALNO_A
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.serial
+          master_item:
+            key: aps.details
+      tags:
+        - tag: class
+          value: network
+        - tag: target
+          value: central-dashboard
+    - uuid: 615f206c76bc44d89f6a40d5455542e2
+      template: 'LVER dashboard'
+      name: 'LVER dashboard'
+      groups:
+        - name: Aruba_Central
+        - name: Templates/Applications
+        - name: 'Templates/Network devices'
+      items:
+        - uuid: a6f4e073046f42e5b112b902b94e7f54
+          name: Master_AP
+          type: SCRIPT
+          key: master.ap
+          delay: 5m
+          history: 1d
+          trends: '0'
+          value_type: TEXT
+          params: |
+            var obj = JSON.parse(value);
+            const token = obj.token;
+            const APIurl = "https://apigw-ca.central.arubanetworks.com/monitoring/v1/aps?show_resource_details=true&limit=200";
+            
+            // Get authentication Token from REST API
+            var reqCentraltoApiAuth = new CurlHttpRequest();
+            reqCentraltoApiAuth.AddHeader('Content-Type: application/json');
+            reqCentraltoApiAuth.AddHeader('authorization: Bearer ' + token);
+            var jsonReceived = reqCentraltoApiAuth.Get(APIurl); // Utilisation de Request() au lieu de Get()
+            // Parser le JSON reçu
+            var jsonObject = JSON.parse(jsonReceived);
+            
+            // Filtrer et reformater les données
+            var filteredData = {
+              "aps": []
+            };
+            
+            // Parcours de chaque AP dans la liste
+            for (var i = 0; i < jsonObject.aps.length; i++) {
+              var ap = jsonObject.aps[i];
+              // Créer un nouvel objet avec les champs requis
+              var filteredAP = {
+                "serial": ap.serial,
+                "status": ap.status,
+                "uptime": ap.uptime,
+                "mem_free": ap.mem_free,
+                "cpu_utilization": ap.cpu_utilization
+              };
+              // Ajouter l'objet filtré à la liste des AP filtrés
+              filteredData.aps.push(filteredAP);
+            }
+            
+            // Convertir l'objet filtré en format JSON
+            var filteredJSON = JSON.stringify(filteredData, null, 2);
+            
+            // Afficher le JSON filtré
+            return filteredJSON;
+          parameters:
+            - name: token
+              value: '{$LVER_TOKEN}'
+          triggers:
+            - uuid: f67ef324496f45668f00739522bb4026
+              expression: 'nodata(/LVER dashboard/master.ap,12m)=1'
+              name: 'master AP'
+              priority: INFO
+        - uuid: c3266018875d4616ad150e75a3a5d8ab
+          name: Master_Switches
+          type: SCRIPT
+          key: master.switch
+          delay: 5m
+          trends: '0'
+          value_type: TEXT
+          params: |
+            var obj = JSON.parse(value);
+            const token = obj.token;
+            const APIurl = "https://apigw-ca.central.arubanetworks.com/monitoring/v1/switches?show_resource_details=true&limit=200";
+            
+            // Get authentication Token from REST API
+            var reqCentraltoApiAuth = new CurlHttpRequest();
+            reqCentraltoApiAuth.AddHeader('Content-Type: application/json');
+            reqCentraltoApiAuth.AddHeader('authorization: Bearer ' + token);
+            var jsonReceived = reqCentraltoApiAuth.Get(APIurl); // Utilisation de Request() au lieu de Get()
+            // Parser le JSON reçu
+            var jsonObject = JSON.parse(jsonReceived);
+            
+            // Filtrer et reformater les données
+            var filteredData = {
+              "switches": []
+            };
+            
+            // Parcours de chaque AP dans la liste
+            for (var i = 0; i < jsonObject.switches.length; i++) {
+              var ap = jsonObject.switches[i];
+              // Créer un nouvel objet avec les champs requis
+              var filteredAP = {
+                "serial": ap.serial,
+                "status": ap.status,
+                "poe_consumption": ap.poe_consumption,
+                "fan_speed": ap.fan_speed,
+                "uptime": ap.uptime,
+                "mem_free": ap.mem_free,
+                "cpu_utilization": ap.cpu_utilization
+              };
+              // Ajouter l'objet filtré à la liste des AP filtrés
+              filteredData.switches.push(filteredAP);
+            }
+            
+            // Convertir l'objet filtré en format JSON
+            var filteredJSON = JSON.stringify(filteredData, null, 2);
+            
+            // Afficher le JSON filtré
+            return filteredJSON;
+          parameters:
+            - name: token
+              value: '{$LVER_TOKEN}'
+          triggers:
+            - uuid: e39f3e396e944e3a8c23ee5ea9730302
+              expression: 'nodata(/LVER dashboard/master.switch,12m)=1'
+              name: 'master switches'
+              priority: INFO
+        - uuid: 99e66872309a4715a43eeead6cdb6e6e
+          name: 'Update Token'
+          type: SCRIPT
+          key: update.token
+          delay: 1h
+          trends: '0'
+          value_type: TEXT
+          params: |
+            var obj = JSON.parse(value);
+            const client_id = obj.client_id;
+            const client_secret = obj.client_secret;
+            const refresh_token = obj.refresh_token;
+            const macroIdToekn = obj.macroIdToken;
+            const macroIdRefersh = obj.macroIdRefersh;
+            const zabbixToken = obj.zabbixToken;
+            
+            const APIurl = "https://apigw-ca.central.arubanetworks.com/oauth2/token?client_id="+client_id+"&client_secret="+client_secret+"&grant_type=refresh_token&refresh_token="+refresh_token;
+            const zabbixUrl = 'http://10.10.99.100/zabbix/api_jsonrpc.php';
+            const macroValueRefresh = 'updatelesdeux';
+            
+            // Get authentication Token from REST API
+            var reqCentraltoApiAuth = new CurlHttpRequest();
+            reqCentraltoApiAuth.AddHeader('Content-Type: application/json');
+            var response_Centralto_auth = JSON.parse(reqCentraltoApiAuth.Post(APIurl));
+            var macroValueToken = response_Centralto_auth.access_token;
+            var macroValueRefresh = response_Centralto_auth.refresh_token;
+            
+            var req = new CurlHttpRequest();
+            var overwrite = JSON.parse(req.Post(zabbixUrl,
+            '{"jsonrpc":"2.0","method":"usermacro.updateglobal","params":{"globalmacroid":"'+macroIdRefersh+'","value":"'+macroValueRefresh+'"},"auth":"'+zabbixToken+'","id":1}'
+            ));
+            
+            var req1 = new CurlHttpRequest();
+            var overwrite1 = JSON.parse(req1.Post(zabbixUrl,
+            '{"jsonrpc":"2.0","method":"usermacro.updateglobal","params":{"globalmacroid":"'+macroIdToekn+'","value":"'+macroValueToken+'"},"auth":"'+zabbixToken+'","id":1}'
+            ));
+            return macroValueToken;
+          parameters:
+            - name: client_id
+              value: '{$LVER_CLIENT_ID}'
+            - name: client_secret
+              value: '{$LVER_CLIENT_SECRET}'
+            - name: macroIdRefersh
+              value: '11'
+            - name: macroIdToken
+              value: '12'
+            - name: refresh_token
+              value: '{$LVER_REFRESH_TOKEN}'
+            - name: zabbixToken
+              value: '{$ZABBIX_TOKEN}'
+        - uuid: 71c3971d0a5c4ee3b0abace7986ecd9b
+          name: 'Zabbix get  Macros'
+          type: HTTP_AGENT
+          key: zabbix.get.macros
+          delay: 24h
+          trends: '0'
+          status: DISABLED
+          value_type: TEXT
+          url: 'http://10.10.99.100/zabbix/api_jsonrpc.php'
+          posts: |
+            {
+                "jsonrpc": "2.0",
+                "method": "usermacro.get",
+                "params": {
+                    "output": "extend",
+                    "globalmacro": true
+                },
+            "auth": "d12888f0da696f6ad37dd259b5c3568eec8db6689e9f8458d0290a176a6cce97",
+                "id": 1
+            }
+          post_type: JSON
+          request_method: POST
+      discovery_rules:
+        - uuid: d40e0b1b24bd4753b9169b9482303646
+          name: 'Discovery of APs'
+          type: SCRIPT
+          key: central.aps
+          delay: 24h
+          params: |
+            var obj = JSON.parse(value);
+            const token = obj.token;
+            const APIurl = "https://apigw-ca.central.arubanetworks.com/monitoring/v1/aps?limit=200";
+            
+            // Get authentication Token from REST API
+            var reqCentraltoApiAuth = new CurlHttpRequest();
+            reqCentraltoApiAuth.AddHeader('Content-Type: application/json');
+            reqCentraltoApiAuth.AddHeader('authorization: Bearer ' + token);
+            var jsonReceived = reqCentraltoApiAuth.Get(APIurl); // Utilisation de Request() au lieu de Get()
+            // Parser le JSON reçu
+            var jsonObject = JSON.parse(jsonReceived);
+            
+            // Filtrer et reformater les données
+            var filteredData = {
+              "aps": []
+            };
+            
+            // Parcours de chaque AP dans la liste
+            for (var i = 0; i < jsonObject.aps.length; i++) {
+              var ap = jsonObject.aps[i];
+              // Créer un nouvel objet avec les champs requis
+              var filteredAP = {
+                "serial": ap.serial,
+                "name": ap.name
+              };
+              // Ajouter l'objet filtré à la liste des AP filtrés
+              filteredData.aps.push(filteredAP);
+            }
+            
+            // Convertir l'objet filtré en format JSON
+            var filteredJSON = JSON.stringify(filteredData, null, 2);
+            
+            // Afficher le JSON filtré
+            return filteredJSON;
+          host_prototypes:
+            - uuid: 4379c4614d1f460ab343d7b0d2b4ba82
+              host: '{#NAME}'
+              name: '{#NAME}'
+              group_links:
+                - group:
+                    name: Aruba_Central
+              templates:
+                - name: 'LVER AP Device'
+              macros:
+                - macro: '{$NAME}'
+                  value: '{#NAME}'
+                - macro: '{$SERIAL}'
+                  value: '{#SERIAL}'
+              inventory_mode: AUTOMATIC
+          parameters:
+            - name: token
+              value: '{$LVER_TOKEN}'
+          lld_macro_paths:
+            - lld_macro: '{#NAME}'
+              path: $.name
+            - lld_macro: '{#SERIAL}'
+              path: $.serial
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.aps
+        - uuid: f1cf053129044da1be07826883836322
+          name: 'Discovery of LVER SSID'
+          type: HTTP_AGENT
+          key: central.ssid.lver
+          delay: 24h
+          item_prototypes:
+            - uuid: ffb1e2597fed492bba0d6373e126e19e
+              name: 'Clients connectés sur {#SSIDNAME}'
+              type: HTTP_AGENT
+              key: 'aruba.nbclients[{#SSIDNAME}]'
+              delay: 5m
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - $.client_count
+              timeout: 10s
+              url: 'https://apigw-ca.central.arubanetworks.com/monitoring/v2/networks/{#SSIDNAME}'
+              headers:
+                - name: Authorization
+                  value: 'Bearer {$LVER_TOKEN}'
+          timeout: 10s
+          url: 'https://apigw-ca.central.arubanetworks.com/monitoring/v2/networks'
+          status_codes: ''
+          headers:
+            - name: Authorization
+              value: 'Bearer {$LVER_TOKEN}'
+          lld_macro_paths:
+            - lld_macro: '{#SSIDNAME}'
+              path: $.essid
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.networks
+        - uuid: b33d04a3bb45402c9cbf5847f0ccc1f7
+          name: 'Discovery of Switches'
+          type: SCRIPT
+          key: central.switches
+          delay: 24h
+          params: |
+            var obj = JSON.parse(value);
+            const token = obj.token;
+            const APIurl = "https://apigw-ca.central.arubanetworks.com/monitoring/v1/switches?show_resource_details=true&limit=200";
+            
+            // Get authentication Token from REST API
+            var reqCentraltoApiAuth = new CurlHttpRequest();
+            reqCentraltoApiAuth.AddHeader('Content-Type: application/json');
+            reqCentraltoApiAuth.AddHeader('authorization: Bearer ' + token);
+            var jsonReceived = reqCentraltoApiAuth.Get(APIurl); // Utilisation de Request() au lieu de Get()
+            // Parser le JSON reçu
+            var jsonObject = JSON.parse(jsonReceived);
+            
+            // Filtrer et reformater les données
+            var filteredData = {
+              "switches": []
+            };
+            
+            // Parcours de chaque AP dans la liste
+            for (var i = 0; i < jsonObject.switches.length; i++) {
+              var ap = jsonObject.switches[i];
+              // Vérifier si stack_id est null et modifier stack_member_id en conséquence
+              var stack_member_id = ap.stack_id === null ? 0 : ap.stack_member_id;
+              // Créer un nouvel objet avec les champs requis
+              var filteredAP = {
+                "serial": ap.serial,
+                "stack_id": ap.stack_id,
+                "stack_member_id": stack_member_id,
+                "name": ap.name
+              };
+              // Ajouter l'objet filtré à la liste des AP filtrés
+              filteredData.switches.push(filteredAP);
+            }
+            
+            // Convertir l'objet filtré en format JSON
+            var filteredJSON = JSON.stringify(filteredData, null, 2);
+            
+            // Afficher le JSON filtré
+            return filteredJSON;
+          host_prototypes:
+            - uuid: 0f3db936b5d648a7be7b4208d0ceff6e
+              host: '{#NAME}-{#STACK_MEMBER_ID}'
+              name: '{#NAME}-{#STACK_MEMBER_ID}'
+              group_links:
+                - group:
+                    name: Aruba_Central
+              templates:
+                - name: 'LVER Switches Device'
+              macros:
+                - macro: '{$NAME}'
+                  value: '{#NAME}-{#STACK_MEMBER_ID}'
+                - macro: '{$SERIAL}'
+                  value: '{#SERIAL}'
+              inventory_mode: AUTOMATIC
+          parameters:
+            - name: token
+              value: '{$LVER_TOKEN}'
+          lld_macro_paths:
+            - lld_macro: '{#NAME}'
+              path: $.name
+            - lld_macro: '{#SERIAL}'
+              path: $.serial
+            - lld_macro: '{#STACK_MEMBER_ID}'
+              path: $.stack_member_id
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.switches
+      tags:
+        - tag: class
+          value: network
+        - tag: target
+          value: central-dashboard
+    - uuid: c28ba1795fd04afbb3f29448ee55eddd
+      template: 'LVER Switches Device'
+      name: 'LVER Switches Device'
+      groups:
+        - name: Aruba_Central
+        - name: Templates/Applications
+        - name: 'Templates/Network devices'
+      items:
+        - uuid: 6da631bef5a94cd7b00ad99a42634145
+          name: 'Central Switches Details'
+          type: HTTP_AGENT
+          key: central.get.data
+          delay: 24h
+          trends: '0'
+          value_type: TEXT
+          url: 'https://apigw-ca.central.arubanetworks.com/monitoring/v1/switches/{$SERIAL}'
+          headers:
+            - name: Authorization
+              value: 'Bearer {$LVER_TOKEN}'
+        - uuid: c4dd092438fd49188ad6bf6de0777fca
+          name: firmware_version
+          type: DEPENDENT
+          key: firmware_version
+          delay: '0'
+          history: '0'
+          trends: '0'
+          value_type: TEXT
+          inventory_link: OS
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.firmware_version
+          master_item:
+            key: central.get.data
+        - uuid: b331d083243e431b8184a7c959c93b7e
+          name: cpu_utilization
+          type: CALCULATED
+          key: get.cpu_utilization
+          delay: 5m
+          trends: '0'
+          value_type: TEXT
+          params: last(/LVER-ARUBA/master.switch)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.switches[?(@.serial == "{$SERIAL}")].cpu_utilization.first()'
+        - uuid: 310e3b787abf4147a50f14df4717d5c4
+          name: fan_speed
+          type: CALCULATED
+          key: get.fan_speed
+          delay: 5m
+          trends: '0'
+          value_type: TEXT
+          params: last(/LVER-ARUBA/master.switch)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.switches[?(@.serial == "{$SERIAL}")].fan_speed.first()'
+        - uuid: c3253c3eb3f549459f516823a7eb7b9a
+          name: mem_free
+          type: CALCULATED
+          key: get.mem_free
+          delay: 5m
+          value_type: FLOAT
+          units: byte
+          params: last(/LVER-ARUBA/master.switch)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.switches[?(@.serial == "{$SERIAL}")].mem_free.first()'
+        - uuid: d7cf305734394109a7ae19896d378b16
+          name: poe_consumption
+          type: CALCULATED
+          key: get.poe_consumption
+          delay: 5m
+          value_type: FLOAT
+          units: mW
+          params: last(/LVER-ARUBA/master.switch)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.switches[?(@.serial == "{$SERIAL}")].poe_consumption.first()'
+        - uuid: 7edd8aad0ebb46e2b8ccf9577dde4a2a
+          name: status
+          type: CALCULATED
+          key: get.status
+          delay: 5m
+          trends: '0'
+          value_type: TEXT
+          params: last(/LVER-ARUBA/master.switch)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.switches[?(@.serial == "{$SERIAL}")].status.first()'
+          triggers:
+            - uuid: aed95ece67ec48729ceae411570cf557
+              expression: 'last(/LVER Switches Device/get.status)<>"Up"'
+              name: Down
+              priority: DISASTER
+            - uuid: 7761c91b30b441249c1913cb663d9f7e
+              expression: 'nodata(/LVER Switches Device/get.status,12m)=1'
+              name: 'No info'
+              priority: INFO
+        - uuid: 81c7483daf344f738afb7e699e29ed15
+          name: uptime
+          type: CALCULATED
+          key: get.uptime
+          delay: 5m
+          value_type: FLOAT
+          units: s
+          params: last(/LVER-ARUBA/master.switch)
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.switches[?(@.serial == "{$SERIAL}")].uptime.first()'
+        - uuid: 9da53cb7f0e74728b59cd104e6c01a36
+          name: model
+          type: DEPENDENT
+          key: model
+          delay: '0'
+          history: '0'
+          trends: '0'
+          value_type: TEXT
+          inventory_link: MODEL
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.model
+          master_item:
+            key: central.get.data
+        - uuid: 570e2861c80b44cbb3916bcaa102ab78
+          name: serial
+          type: DEPENDENT
+          key: serial
+          delay: '0'
+          history: '0'
+          trends: '0'
+          value_type: TEXT
+          inventory_link: SERIALNO_A
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.serial
+          master_item:
+            key: central.get.data
+      tags:
+        - tag: class
+          value: network
+        - tag: target
+          value: central-dashboard
