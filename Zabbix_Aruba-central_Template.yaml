@@ -10,8 +10,8 @@ zabbix_export:
       name: 'Templates/Network devices'
   templates:
     - uuid: f448b00884a1451da449012a3831fc42
-      template: 'LVER AP Device'
-      name: 'LVER AP Device'
+      template: 'XXXX AP Device'
+      name: 'XXXX AP Device'
       groups:
         - name: Aruba_Central
         - name: Templates/Applications
@@ -28,7 +28,7 @@ zabbix_export:
           url: 'https://apigw-ca.central.arubanetworks.com/monitoring/v1/aps/{$SERIAL}'
           headers:
             - name: Authorization
-              value: 'Bearer {$LVER_TOKEN}'
+              value: 'Bearer {$XXXX_TOKEN}'
         - uuid: 66c946b4f7954d0682ebf8fd3793fd84
           name: firmware_version
           type: DEPENDENT
@@ -50,7 +50,7 @@ zabbix_export:
           delay: 5m
           trends: '0'
           value_type: TEXT
-          params: last(/LVER-ARUBA/master.ap)
+          params: last(/XXXX-ARUBA/master.ap)
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -62,7 +62,7 @@ zabbix_export:
           delay: 5m
           value_type: FLOAT
           units: byte
-          params: last(/LVER-ARUBA/master.ap)
+          params: last(/XXXX-ARUBA/master.ap)
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -74,18 +74,18 @@ zabbix_export:
           delay: 5m
           trends: '0'
           value_type: TEXT
-          params: last(/LVER-ARUBA/master.ap)
+          params: last(/XXXX-ARUBA/master.ap)
           preprocessing:
             - type: JSONPATH
               parameters:
                 - '$.aps[?(@.serial == "{$SERIAL}")].status.first()'
           triggers:
             - uuid: 7ddae7a0d6b243339c8af4f05a4d2343
-              expression: 'last(/LVER AP Device/get.status.fmaster)<>"Up"'
+              expression: 'last(/XXXX AP Device/get.status.fmaster)<>"Up"'
               name: 'AP Down'
               priority: AVERAGE
             - uuid: cea5f910c3a946489424c0a51a1998d8
-              expression: 'nodata(/LVER AP Device/get.status.fmaster,10m)=1'
+              expression: 'nodata(/XXXX AP Device/get.status.fmaster,10m)=1'
               name: 'No info'
               priority: INFO
         - uuid: 5e3c3dcad3ed423d872969a51318780a
@@ -95,7 +95,7 @@ zabbix_export:
           delay: 5m
           value_type: FLOAT
           units: s
-          params: last(/LVER-ARUBA/master.ap)
+          params: last(/XXXX-ARUBA/master.ap)
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -134,8 +134,8 @@ zabbix_export:
         - tag: target
           value: central-dashboard
     - uuid: 615f206c76bc44d89f6a40d5455542e2
-      template: 'LVER dashboard'
-      name: 'LVER dashboard'
+      template: 'XXXX dashboard'
+      name: 'XXXX dashboard'
       groups:
         - name: Aruba_Central
         - name: Templates/Applications
@@ -189,10 +189,10 @@ zabbix_export:
             return filteredJSON;
           parameters:
             - name: token
-              value: '{$LVER_TOKEN}'
+              value: '{$XXXX_TOKEN}'
           triggers:
             - uuid: f67ef324496f45668f00739522bb4026
-              expression: 'nodata(/LVER dashboard/master.ap,12m)=1'
+              expression: 'nodata(/XXXX dashboard/master.ap,12m)=1'
               name: 'master AP'
               priority: INFO
         - uuid: c3266018875d4616ad150e75a3a5d8ab
@@ -244,10 +244,10 @@ zabbix_export:
             return filteredJSON;
           parameters:
             - name: token
-              value: '{$LVER_TOKEN}'
+              value: '{$XXXX_TOKEN}'
           triggers:
             - uuid: e39f3e396e944e3a8c23ee5ea9730302
-              expression: 'nodata(/LVER dashboard/master.switch,12m)=1'
+              expression: 'nodata(/XXXX dashboard/master.switch,12m)=1'
               name: 'master switches'
               priority: INFO
         - uuid: 99e66872309a4715a43eeead6cdb6e6e
@@ -289,15 +289,15 @@ zabbix_export:
             return macroValueToken;
           parameters:
             - name: client_id
-              value: '{$LVER_CLIENT_ID}'
+              value: '{$XXXX_CLIENT_ID}'
             - name: client_secret
-              value: '{$LVER_CLIENT_SECRET}'
+              value: '{$XXXX_CLIENT_SECRET}'
             - name: macroIdRefersh
               value: '11'
             - name: macroIdToken
               value: '12'
             - name: refresh_token
-              value: '{$LVER_REFRESH_TOKEN}'
+              value: '{$XXXX_REFRESH_TOKEN}'
             - name: zabbixToken
               value: '{$ZABBIX_TOKEN}'
         - uuid: 71c3971d0a5c4ee3b0abace7986ecd9b
@@ -371,7 +371,7 @@ zabbix_export:
                 - group:
                     name: Aruba_Central
               templates:
-                - name: 'LVER AP Device'
+                - name: 'XXXX AP Device'
               macros:
                 - macro: '{$NAME}'
                   value: '{#NAME}'
@@ -380,7 +380,7 @@ zabbix_export:
               inventory_mode: AUTOMATIC
           parameters:
             - name: token
-              value: '{$LVER_TOKEN}'
+              value: '{$XXXX_TOKEN}'
           lld_macro_paths:
             - lld_macro: '{#NAME}'
               path: $.name
@@ -391,9 +391,9 @@ zabbix_export:
               parameters:
                 - $.aps
         - uuid: f1cf053129044da1be07826883836322
-          name: 'Discovery of LVER SSID'
+          name: 'Discovery of XXXX SSID'
           type: HTTP_AGENT
-          key: central.ssid.lver
+          key: central.ssid.XXXX
           delay: 24h
           item_prototypes:
             - uuid: ffb1e2597fed492bba0d6373e126e19e
@@ -409,13 +409,13 @@ zabbix_export:
               url: 'https://apigw-ca.central.arubanetworks.com/monitoring/v2/networks/{#SSIDNAME}'
               headers:
                 - name: Authorization
-                  value: 'Bearer {$LVER_TOKEN}'
+                  value: 'Bearer {$XXXX_TOKEN}'
           timeout: 10s
           url: 'https://apigw-ca.central.arubanetworks.com/monitoring/v2/networks'
           status_codes: ''
           headers:
             - name: Authorization
-              value: 'Bearer {$LVER_TOKEN}'
+              value: 'Bearer {$XXXX_TOKEN}'
           lld_macro_paths:
             - lld_macro: '{#SSIDNAME}'
               path: $.essid
@@ -475,7 +475,7 @@ zabbix_export:
                 - group:
                     name: Aruba_Central
               templates:
-                - name: 'LVER Switches Device'
+                - name: 'XXXX Switches Device'
               macros:
                 - macro: '{$NAME}'
                   value: '{#NAME}-{#STACK_MEMBER_ID}'
@@ -484,7 +484,7 @@ zabbix_export:
               inventory_mode: AUTOMATIC
           parameters:
             - name: token
-              value: '{$LVER_TOKEN}'
+              value: '{$XXXX_TOKEN}'
           lld_macro_paths:
             - lld_macro: '{#NAME}'
               path: $.name
@@ -502,8 +502,8 @@ zabbix_export:
         - tag: target
           value: central-dashboard
     - uuid: c28ba1795fd04afbb3f29448ee55eddd
-      template: 'LVER Switches Device'
-      name: 'LVER Switches Device'
+      template: 'XXXX Switches Device'
+      name: 'XXXX Switches Device'
       groups:
         - name: Aruba_Central
         - name: Templates/Applications
@@ -519,7 +519,7 @@ zabbix_export:
           url: 'https://apigw-ca.central.arubanetworks.com/monitoring/v1/switches/{$SERIAL}'
           headers:
             - name: Authorization
-              value: 'Bearer {$LVER_TOKEN}'
+              value: 'Bearer {$XXXX_TOKEN}'
         - uuid: c4dd092438fd49188ad6bf6de0777fca
           name: firmware_version
           type: DEPENDENT
@@ -542,7 +542,7 @@ zabbix_export:
           delay: 5m
           trends: '0'
           value_type: TEXT
-          params: last(/LVER-ARUBA/master.switch)
+          params: last(/XXXX-ARUBA/master.switch)
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -554,7 +554,7 @@ zabbix_export:
           delay: 5m
           trends: '0'
           value_type: TEXT
-          params: last(/LVER-ARUBA/master.switch)
+          params: last(/XXXX-ARUBA/master.switch)
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -566,7 +566,7 @@ zabbix_export:
           delay: 5m
           value_type: FLOAT
           units: byte
-          params: last(/LVER-ARUBA/master.switch)
+          params: last(/XXXX-ARUBA/master.switch)
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -578,7 +578,7 @@ zabbix_export:
           delay: 5m
           value_type: FLOAT
           units: mW
-          params: last(/LVER-ARUBA/master.switch)
+          params: last(/XXXX-ARUBA/master.switch)
           preprocessing:
             - type: JSONPATH
               parameters:
@@ -590,18 +590,18 @@ zabbix_export:
           delay: 5m
           trends: '0'
           value_type: TEXT
-          params: last(/LVER-ARUBA/master.switch)
+          params: last(/XXXX-ARUBA/master.switch)
           preprocessing:
             - type: JSONPATH
               parameters:
                 - '$.switches[?(@.serial == "{$SERIAL}")].status.first()'
           triggers:
             - uuid: aed95ece67ec48729ceae411570cf557
-              expression: 'last(/LVER Switches Device/get.status)<>"Up"'
+              expression: 'last(/XXXX Switches Device/get.status)<>"Up"'
               name: Down
               priority: DISASTER
             - uuid: 7761c91b30b441249c1913cb663d9f7e
-              expression: 'nodata(/LVER Switches Device/get.status,12m)=1'
+              expression: 'nodata(/XXXX Switches Device/get.status,12m)=1'
               name: 'No info'
               priority: INFO
         - uuid: 81c7483daf344f738afb7e699e29ed15
@@ -611,7 +611,7 @@ zabbix_export:
           delay: 5m
           value_type: FLOAT
           units: s
-          params: last(/LVER-ARUBA/master.switch)
+          params: last(/XXXX-ARUBA/master.switch)
           preprocessing:
             - type: JSONPATH
               parameters:
