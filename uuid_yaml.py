@@ -6,7 +6,7 @@ def generateUUIDv4():
     return str(uuid.uuid4()).replace('-', '')
 
 # Lire le contenu du fichier old.yaml
-with open('old.yaml', 'r') as file:
+with open('Zabbix_Aruba-central_Template.yaml', 'r') as file:
     content = file.read()
 
 # Remplacer les UUID dans le contenu
