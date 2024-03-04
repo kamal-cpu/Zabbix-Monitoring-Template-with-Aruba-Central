@@ -23,8 +23,15 @@ Proper API credentials to interact with the Aruba Central API.
 
 # Usage
 Clone this repository to your local environment or download the YAML templates.
+  
 Import the YAML templates into your Zabbix server following the provided instructions.
 Configure the templates with your Aruba Central authentication information.
+
+  #### 1 - Create a Global Macro named:   {$XXXX_CLIENT_ID}, {$XXXX_CLIENT_SECRET}, {$XXXX_REFRESH_TOKEN}, {$XXXX_TOKEN}
+  #### 2 - Update macroIdRefersh and macroIdToken values in the 'Update Token' item using the ID obtained with the 'Zabbix get Macros' item
+  #### 3 - Create a Host and attach the Template XXXX dashboard.
+  #### 4 - Execute discovery if you don't want to wait for 24 hours.
+  
 Customize alerts and dashboards within Zabbix according to your monitoring requirements.
 # Contribution
 Contributions to enhance these templates are welcome! Please feel free to submit pull requests with your improvements or suggestions.
