@@ -1,3 +1,6 @@
+# Created By Kamal Ait hammou
+# Date : 2024-03-04
+# Email : kamal.ait-hammou@cpu.ca
 import re
 import uuid
 
